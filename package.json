@@ -1,0 +1,36 @@
+{
+  "name": "apuestasdeportivas",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "infra:status": "docker compose ps",
+    "infra:logs": "docker compose logs --tail=100",
+    "reports:dev": "uv run --project apps/reports fastapi dev apps/reports/src/main.py --host 0.0.0.0 --port ${REPORTS_PORT:-8000}",
+    "reports:lint": "uv run --project apps/reports ruff check apps/reports",
+    "reports:test": "COVERAGE_FILE=/tmp/apuestas-reports.coverage uv run --project apps/reports pytest --cov=main --cov-report=term-missing --cov-report=xml:/tmp/apuestas-reports-coverage.xml apps/reports/tests",
+    "prepare": "husky",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml}\""
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.4.6",
+    "@types/node": "24.19.2",
+    "eslint": "10.15.0",
+    "husky": "9.1.7",
+    "prettier": "3.10.1",
+    "turbo": "2.11.11",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2"
+  }
+}
