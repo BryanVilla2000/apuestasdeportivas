@@ -1,0 +1,11 @@
+{
+  "name": "@apuestasdeportivas/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}
