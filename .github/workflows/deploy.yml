@@ -1,0 +1,86 @@
+name: Deploy applications
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: Deployment environment selected from the protected branch
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-web:
+    name: Deploy web to Vercel
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    env:
+      VERCEL_ENVIRONMENT: ${{ inputs.target == 'staging' && 'staging' || 'production' }}
+      VERCEL_TARGET: ${{ inputs.target == 'staging' && 'staging' || 'production' }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: Configure pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.34.9
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and deploy web
+        working-directory: apps/web
+        run: |
+          pnpm dlx vercel@latest pull --yes --environment="$VERCEL_ENVIRONMENT" --token="$VERCEL_TOKEN"
+          pnpm dlx vercel@latest build --target="$VERCEL_TARGET" --token="$VERCEL_TOKEN"
+          pnpm dlx vercel@latest deploy --prebuilt --target="$VERCEL_TARGET" --token="$VERCEL_TOKEN"
+
+  deploy-api:
+    name: Deploy API to Render
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ inputs.target == 'staging' && secrets.RENDER_API_DEPLOY_HOOK_STAGING || secrets.RENDER_API_DEPLOY_HOOK_PRODUCTION }}
+    steps:
+      - name: Trigger API deployment for this revision
+        run: curl --fail --silent --show-error --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK_URL"
+
+  deploy-reports:
+    name: Deploy reports to Render
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ inputs.target == 'staging' && secrets.RENDER_REPORTS_DEPLOY_HOOK_STAGING || secrets.RENDER_REPORTS_DEPLOY_HOOK_PRODUCTION }}
+    steps:
+      - name: Trigger reports deployment for this revision
+        run: curl --fail --silent --show-error --get --data-urlencode "ref=${GITHUB_SHA}" "$RENDER_DEPLOY_HOOK_URL"
+
+  smoke:
+    name: Verify web, API and reports
+    runs-on: ubuntu-latest
+    needs:
+      - deploy-web
+      - deploy-api
+      - deploy-reports
+    environment: ${{ inputs.target }}
+    env:
+      WEB_URL: ${{ inputs.target == 'staging' && vars.WEB_URL_STAGING || vars.WEB_URL_PRODUCTION }}
+      API_URL: ${{ inputs.target == 'staging' && vars.API_URL_STAGING || vars.API_URL_PRODUCTION }}
+      REPORTS_URL: ${{ inputs.target == 'staging' && vars.REPORTS_URL_STAGING || vars.REPORTS_URL_PRODUCTION }}
+    steps:
+      - name: Wait for deployed applications and check health
+        run: |
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 10 "$WEB_URL/"
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 10 "${API_URL%/}/health"
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 10 "${REPORTS_URL%/}/health"
