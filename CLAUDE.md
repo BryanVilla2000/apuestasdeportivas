@@ -6,6 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Proyecto académico (UTPL) en fase inicial: todavía no hay código. La especificación completa está en `promtp.md` y es la fuente de verdad de requisitos; léela antes de implementar cualquier funcionalidad. Los principios no negociables del proyecto están en `.specify/memory/constitution.md` (Spec Kit) y prevalecen sobre este archivo. El orden de construcción, las decisiones técnicas base y los criterios de cierre de cada fase están en `PLAN.md`. Cuando se creen los `package.json` / `pyproject.toml`, añade aquí los comandos reales de build, lint y tests (incluido cómo ejecutar un solo test).
 
+La base de F0 de Spec #001 está implementada en `feature/spec-1`; la integración CI/CD, los despliegues y la trazabilidad externa siguen pendientes. Los comandos verificados se documentan a continuación.
+
+## Comandos verificados de desarrollo
+
+Desde la raíz del monorepo:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm run format:check
+pnpm reports:lint
+pnpm reports:test
+pnpm reports:dev
+```
+
+`pnpm test` ejecuta Jest para API y Playwright para web. Los checks Python se ejecutan por separado con `reports:lint` y `reports:test`. `reports:dev` sirve FastAPI en el puerto 8000 por defecto; se puede elegir otro con `REPORTS_PORT`.
+
+Para ejecutar un test individual:
+
+```bash
+pnpm --filter @apuestasdeportivas/api test --runTestsByPath test/health.e2e-spec.ts
+pnpm --filter @apuestasdeportivas/web test --grep "loads the F0 welcome page"
+pnpm reports:test -k health
+```
+
 ## Arquitectura prevista
 
 Monorepo con tres aplicaciones:

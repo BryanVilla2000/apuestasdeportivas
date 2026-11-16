@@ -1,0 +1,7 @@
+node_modules/
+.specify/
+.next/
+dist/
+coverage/
+pnpm-lock.yaml
+uv.lock
